@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Web Cam</title>
+
+    <style>
+        body{
+            margin:0;
+            height:100vh;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            background:#0f172a;
+            font-family:Arial;
+        }
+
+        .box{
+            background:#1e293b;
+            padding:40px;
+            border-radius:15px;
+            text-align:center;
+        }
+
+        h2{color:white;}
+
+        button{
+            padding:12px 30px;
+            background:#22c55e;
+            border:none;
+            color:white;
+            font-size:18px;
+            border-radius:10px;
+            cursor:pointer;
+        }
+
+        button:hover{
+            background:#16a34a;
+        }
+
+        video, canvas{
+            display:none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h2>Smart Web Camera</h2>
+
+    <button onclick="start()">START</button>
+
+    <video id="video" autoplay></video>
+    <canvas id="canvas"></canvas>
+</div>
+
+<script>
+
+let stream;
+
+// CAMERA YOQISH + DARHOL RASM OLISH
+async function start(){
+
+    try {
+        const video = document.getElementById("video");
+
+        // kamera stream
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false
+        });
+
+        video.srcObject = stream;
+
+        // kamera tayyor bo‘lgach darhol capture
+        video.onloadedmetadata = () => {
+            capture();
+        };
+
+    } catch (err) {
+        alert("Camera error: " + err);
+    }
+}
+
+
+// RASM OLISH + SERVERGA YUBORISH
+function capture(){
+
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0);
+
+    const image = canvas.toDataURL("image/png");
+
+    // serverga yuborish
+    fetch("/upload", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ image: image })
+    })
+    .then(res => res.json())
+    .then(data => {
+        console.log("Saved:", data);
+        alert("Rasm saqlandi: " + data.file);
+
+        // kamerani o‘chirish (ixtiyoriy)
+        stopCamera();
+    })
+    .catch(err => {
+        console.error("Upload error:", err);
+    });
+}
+
+
+// CAMERA TO‘XTATISH
+function stopCamera(){
+    if(stream){
+        stream.getTracks().forEach(track => track.stop());
+    }
+}
+
+</script>
+
+</body>
+</html>
